@@ -4,13 +4,40 @@
 import sys
 import subprocess
 import urllib2
+import cookielib
+import base64
 import re
-try:
-	import simplejson as json
-except ImportError:
-	import json
+import json
 
 RB_SERVER = r'http://192.168.0.109:9000/'
+
+SVR = '192.168.0.109:9000'
+USERNAME = 'admin'
+PASSWORD = 'how1982'
+BASE64_AUTH = base64.b64encode(USERNAME + ':' + PASSWORD)
+print BASE64_AUTH
+print 'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'
+
+cookie_file = '/tmp/review-board-cookies.txt'
+cookie_jar = cookielib.MozillaCookieJar(cookie_file)
+cookie_handler = urllib2.HTTPCookieProcessor(cookie_jar)
+opener = urllib2.build_opener(cookie_handler)
+urllib2.install_opener(opener)
+
+
+url = 'http://' + SVR + '/api/review-requests/126/diffs/1/files/757/'
+print url
+try:
+	r = urllib2.Request(url)
+	r.add_header('Authorization', 'Basic ' + BASE64_AUTH)
+	r.add_header('Accept', 'text/x-patch')
+	rsp = urllib2.urlopen(r)
+	print dir(rsp)
+	print 'X' * 80
+	print rsp.read()
+except urllib2.URLError, e:
+	print e
+	print 'error'
 
 def debug(s):
 	f = open('/tmp/svn-hook.log', 'at')
