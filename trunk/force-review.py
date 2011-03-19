@@ -8,41 +8,46 @@ import cookielib
 import base64
 import re
 import json
+from urlparse import urljoin
 
-RB_SERVER = r'http://192.168.0.109:9000/'
-
-SVR = '192.168.0.109:9000'
+RB_SERVER = r'http://192.168.0.109:9000'
+COOKIE_FILE = '/tmp/review-board-cookies.txt'
 USERNAME = 'admin'
 PASSWORD = 'how1982'
-BASE64_AUTH = base64.b64encode(USERNAME + ':' + PASSWORD)
-print BASE64_AUTH
-print 'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'
-
-cookie_file = '/tmp/review-board-cookies.txt'
-cookie_jar = cookielib.MozillaCookieJar(cookie_file)
-cookie_handler = urllib2.HTTPCookieProcessor(cookie_jar)
-opener = urllib2.build_opener(cookie_handler)
-urllib2.install_opener(opener)
-
-
-url = 'http://' + SVR + '/api/review-requests/126/diffs/1/files/757/'
-print url
-try:
-	r = urllib2.Request(url)
-	r.add_header('Authorization', 'Basic ' + BASE64_AUTH)
-	r.add_header('Accept', 'text/x-patch')
-	rsp = urllib2.urlopen(r)
-	print dir(rsp)
-	print 'X' * 80
-	print rsp.read()
-except urllib2.URLError, e:
-	print e
-	print 'error'
 
 def debug(s):
 	f = open('/tmp/svn-hook.log', 'at')
 	print >>f, s
 	f.close()
+
+class SvnError(StandardError):
+	pass
+
+class Opener(object):
+	def __init__(self, server, username, password, cookie_file = None):
+		self._server = server
+		if cookie_file is None:
+			cookie_file = COOKIE_FILE
+		self._auth = base64.b64encode(username + ':' + password)
+		cookie_jar = cookielib.MozillaCookieJar(cookie_file)
+		cookie_handler = urllib2.HTTPCookieProcessor(cookie_jar)
+		self._opener = urllib2.build_opener(cookie_handler)
+
+	def open(self, path, ext_headers, *a, **k):
+		url = urljoin(self._server, path)
+		return self.abs_open(url, ext_headers, *a, **k)
+
+	def abs_open(self, url, ext_headers, *a, **k):
+		debug('url open:%s' % url)
+		r = urllib2.Request(url)
+		for k, v in ext_headers:
+			r.add_header(k, v)
+		r.add_header('Authorization', 'Basic ' + self._auth)
+		try:
+			rsp = self._opener.open(r)
+			return rsp.read()
+		except urllib2.URLError, e:
+			raise SvnError(str(e))
 
 def make_svnlook_cmd(directive, repos, txn):
 	return ['svnlook', directive, '-t',  txn, repos]
@@ -62,32 +67,21 @@ def get_patch(diff_url):
 #	try:
 	pass
 
-
 def get_review_diff(rid):
-	url = RB_SERVER + 'api/json/review-requests/' + str(rid) + 'diffs/'
-	debug('HTTP GETing ' + url)
-	try:
-		rsp = urllib2.urlopen(url).read()
-	except urllib2.HTTPError, e:
-		raise SvnError('HTTP GETing ' + url + 'error.' + str(e))
+	path = 'api/json/review-requests/' + str(rid) + 'diffs/'
+	opener = Opener(RB_SERVER, USERNAME, PASSWORD)
+	rsp = opener.open(path)
 	diffs = json.loads(rsp)
 	diff_files_url = diffs['diffs'][-1]['links']['files']['href']
-	try:
-		rsp = urllib2.urlopen(url).read()
-	except urllib2.HTTPError, e:
-		raise SvnError('HTTP GETing' + diff_files_url + 'error.' + str(e))
+	rsp = opener.abs_open(diff_files_url, (('Accept', 'text/x-patch'),))
 	files = json.loads(rsp)
 	for f in files['files']:
 		diff_url = f['links']['self']['href']
-		patch = get_patch(diff_Url)
 		source_file = f['source_file']
-		
-	
-
-
-
-class SvnError(StandardError):
-	pass
+		diff = opener.abs_open(diff_url, (('Accept', 'text/x-patch'),))
+		debug('*' * 80)
+		debug(source_file)
+		debug(diff)
 
 def check_rb(repos, txn):
 	review_id = get_review_id(repos, txn)
