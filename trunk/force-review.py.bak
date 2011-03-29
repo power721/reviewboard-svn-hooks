@@ -65,32 +65,36 @@ def get_review_id(repos, txn):
 		return rid.group(1)
 	raise SvnError('No review id.')
 
-MIN_SHIP_IT_COUNT = 2
-MIN_KEY_USER_SHIP_IT_COUNT = 1
-KEY_SHIP_IT_USERS = set(['see', 'admin', 'hookehu', 'zhongjianneng'])
 
-def check_rb(repos, txn):
-	rid = get_review_id(repos, txn)
-	path = 'api/review-requests/' + str(rid) + '/reviews/'
+def get_review_diff(rid):
+	path = 'api/review-requests/' + str(rid) + '/diffs/'
 	opener = Opener(RB_SERVER, USERNAME, PASSWORD)
 	rsp = opener.open(path, {})
-	reviews = json.loads(rsp)
-	if reviews['stat'] != 'ok':
-		raise SvnError, "get reviews error."
-	ship_it_users = set()
-	for item in reviews['reviews']:
-		ship_it = int(item['ship_it'])
-		if ship_it:
-			ship_it_users.add(item['links']['user']['title'])
-	
-	if len(ship_it_users) < MIN_SHIP_IT_COUNT:
-		raise SvnError, "not enough of ship_it."
-	key_user_count = 0
-	for user in ship_it_users:
-		if user in KEY_SHIP_IT_USERS:
-			key_user_count += 1
-	if key_user_count < MIN_KEY_USER_SHIP_IT_COUNT:
-		raise SvnError, 'not enough of key user ship_it.'
+	diffs = json.loads(rsp)
+	diff_files_url = diffs['diffs'][-1]['links']['files']['href']
+	rsp = opener.abs_open(diff_files_url, (('Accept', 'text/x-patch'),))
+	files = json.loads(rsp)
+	for f in files['files']:
+		diff_url = f['links']['self']['href']
+		source_file = f['source_file']
+		diff = opener.abs_open(diff_url, (('Accept', 'text/x-patch'),))
+		debug('*' * 80)
+		debug(source_file)
+		debug(diff)
+
+def check_rb(repos, txn):
+	review_id = get_review_id(repos, txn)
+	review_diff = get_review_diff(review_id)
+
+
+	svnlook = make_svnlook_cmd('diff', repos, txn)
+	diff = get_cmd_output(svnlook)
+	tmpfile = '/tmp/reviewboard-diff-' + txn
+	try:
+		with open(tmpfile, 'wb') as f:
+			f.write(diff)
+	except (OSError, IOError), e:
+		raise SvnError(str(e))
 
 def main():
 	debug('command:' + str(sys.argv))
@@ -111,9 +115,6 @@ def main():
 
 try:
 	main()
-except SvnError, e:
-	print >> sys.stderr, str(e)
-	exit(1)
 except Exception, e:
 	print >> sys.stderr, str(e)
 	import traceback
