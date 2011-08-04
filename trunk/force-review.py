@@ -9,6 +9,7 @@ import base64
 import re
 import json
 from urlparse import urljoin
+import shelve
 
 RB_SERVER = r'http://192.168.0.109:9000'
 COOKIE_FILE = '/tmp/review-board-cookies.txt'
@@ -69,6 +70,14 @@ MIN_SHIP_IT_COUNT = 2
 MIN_KEY_USER_SHIP_IT_COUNT = 1
 KEY_SHIP_IT_USERS = set(['see', 'admin', 'hookehu', 'zhongjianneng'])
 
+def add_to_rid_db(rid):
+	USED_RID_DB = shelve.open('/etc/rb-svn-hooks-used-rid.db')
+	if USED_RID_DB.has_key(rid):
+		raise SvnError, "review-id(%s) is already used."%rid
+	USED_RID_DB[rid] = rid
+	USED_RID_DB.sync()
+	USED_RID_DB.close()
+
 def check_rb(repos, txn):
 	rid = get_review_id(repos, txn)
 	path = 'api/review-requests/' + str(rid) + '/reviews/'
@@ -91,6 +100,7 @@ def check_rb(repos, txn):
 			key_user_count += 1
 	if key_user_count < MIN_KEY_USER_SHIP_IT_COUNT:
 		raise SvnError, 'not enough of key user ship_it.'
+	add_to_rid_db(rid)
 
 def main():
 	debug('command:' + str(sys.argv))
@@ -104,7 +114,9 @@ def main():
 		f = line[4:]
 		debug(type(f))
 		# 有提交到主干分枝的代码，触发检测。
-		if 'trunk/src/server/test-hook' in f:
+		if 'src/server/' in f or 'release/server' in f:
+			if 'src/server/res/' in f or 'release/server/res/' in f:
+				continue
 			check_rb(repos, txn)
 			return
 	return
