@@ -11,10 +11,25 @@ import json
 from urlparse import urljoin
 import shelve
 
-RB_SERVER = r'http://192.168.0.109:9000'
+import ConfigParser
+
+conf = ConfigParser.ConfigParser()
+try:
+	conf.read('/etc/reviewboard_svn_hooks_conf.ini')
+except StandardError:
+	raise StandardError('invalid configuration file:/etc/reviewboard_svn_hooks_conf.ini')
+
+
 COOKIE_FILE = '/tmp/review-board-cookies.txt'
-USERNAME = 'admin'
-PASSWORD = 'how1982'
+
+RB_SERVER = conf.get('reviewboard', 'url')
+USERNAME = conf.get('reviewboard', 'username')
+PASSWORD = conf.get('reviewboard', 'password')
+
+MIN_SHIP_IT_COUNT = conf.getint('rule', 'min_ship_it_count')
+MIN_KEY_USER_SHIP_IT_COUNT = conf.getint('rule', 'min_key_user_ship_it_count')
+key_users = conf.get('rule', 'key_ship_it_users')
+KEY_SHIP_IT_USERS = set([s.strip() for s in key_users.split(',')])
 
 def debug(s):
 	f = open('/tmp/svn-hook.log', 'at')
@@ -56,8 +71,6 @@ def make_svnlook_cmd(directive, repos, txn):
 def get_cmd_output(cmd):
 	return subprocess.Popen(cmd, stdout = subprocess.PIPE).communicate()[0]
 
-
-
 def get_review_id(repos, txn):
 	svnlook = make_svnlook_cmd('log', repos, txn)
 	log = get_cmd_output(svnlook)
@@ -65,10 +78,6 @@ def get_review_id(repos, txn):
 	if rid:
 		return rid.group(1)
 	raise SvnError('No review id.')
-
-MIN_SHIP_IT_COUNT = 2
-MIN_KEY_USER_SHIP_IT_COUNT = 1
-KEY_SHIP_IT_USERS = set(['see', 'admin', 'hookehu', 'zhongjianneng'])
 
 def add_to_rid_db(rid):
 	USED_RID_DB = shelve.open('/etc/rb-svn-hooks-used-rid.db')
@@ -116,6 +125,8 @@ def main():
 		# 有提交到主干分枝的代码，触发检测。
 		if 'src/server/' in f or 'release/server' in f:
 			if 'src/server/res/' in f or 'release/server/res/' in f:
+				continue
+			if 'server/dist/virtualenv_dist' in f:
 				continue
 			check_rb(repos, txn)
 			return
