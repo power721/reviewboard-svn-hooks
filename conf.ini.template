@@ -1,0 +1,10 @@
+[reviewboard]
+url=
+username=
+password=
+
+[rule]
+min_ship_it_count =
+min_key_user_ship_it_count =
+key_ship_it_users =
+
