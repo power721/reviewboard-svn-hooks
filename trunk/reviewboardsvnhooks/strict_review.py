@@ -14,9 +14,7 @@ import shelve
 import ConfigParser
 
 conf = ConfigParser.ConfigParser()
-try:
-	conf.read('/etc/reviewboard_svn_hooks_conf.ini')
-except StandardError:
+if not conf.read('/etc/reviewboard_svn_hooks_conf.ini'):
 	raise StandardError('invalid configuration file:/etc/reviewboard_svn_hooks_conf.ini')
 
 
@@ -111,7 +109,7 @@ def check_rb(repos, txn):
 		raise SvnError, 'not enough of key user ship_it.'
 	add_to_rid_db(rid)
 
-def main():
+def _main():
 	debug('command:' + str(sys.argv))
 
 	repos = sys.argv[1]
@@ -132,16 +130,17 @@ def main():
 			return
 	return
 
-try:
-	main()
-except SvnError, e:
-	print >> sys.stderr, str(e)
-	exit(1)
-except Exception, e:
-	print >> sys.stderr, str(e)
-	import traceback
-	traceback.print_exc(file=sys.stderr)
-	exit(1)
-else:
-	exit(0)
-
+def main():
+	try:
+		_main()
+	except SvnError, e:
+		print >> sys.stderr, str(e)
+		exit(1)
+	except Exception, e:
+		print >> sys.stderr, str(e)
+		import traceback
+		traceback.print_exc(file=sys.stderr)
+		exit(1)
+	else:
+		exit(0)
+	
