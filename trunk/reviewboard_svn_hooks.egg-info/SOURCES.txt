@@ -1,0 +1,9 @@
+setup.cfg
+setup.py
+reviewboard_svn_hooks.egg-info/PKG-INFO
+reviewboard_svn_hooks.egg-info/SOURCES.txt
+reviewboard_svn_hooks.egg-info/dependency_links.txt
+reviewboard_svn_hooks.egg-info/entry_points.txt
+reviewboard_svn_hooks.egg-info/not-zip-safe
+reviewboard_svn_hooks.egg-info/top_level.txt
+reviewboardsvnhooks/__init__.py
