@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf8 -*-
-
+import os
 import sys
 import subprocess
 import urllib2
@@ -13,26 +13,69 @@ import shelve
 
 import ConfigParser
 
+def get_os_conf_dir():
+	platform = sys.platform
+	if platform.startswith('win'):
+		try:
+			return os.environ['ALLUSERSPROFILE']
+		except KeyError:
+			print >>sys.stderr, 'Unspported operation system:%s'%platform
+			sys.exit(1)
+	return '/etc'
+
+def get_os_temp_dir():
+	platform = sys.platform
+	if platform.startswith('win'):
+		try:
+			return os.environ['TEMP']
+		except KeyError:
+			print >>sys.stderr, 'Unspported operation system:%s'%platform
+			sys.exit(1)
+	return '/tmp'
+
+def get_os_log_dir():	
+	platform = sys.platform
+	if platform.startswith('win'):
+		try:
+			return os.environ['APPDATA']
+		except KeyError:
+			print >>sys.stderr, 'Unspported operation system:%s'%platform
+			sys.exit(1)
+	return '/var/log'
+
+OS_CONF_DIR = get_os_conf_dir()
+
 conf = ConfigParser.ConfigParser()
-if not conf.read('/etc/reviewboard_svn_hooks_conf.ini'):
-	raise StandardError('invalid configuration file:/etc/reviewboard_svn_hooks_conf.ini')
+
+conf_file = os.path.join(OS_CONF_DIR, 'reviewboard-svn-hooks', 'conf.ini')
+if not conf.read(conf_file):
+	raise StandardError('invalid configuration file:%s'%conf_file)
 
 
-COOKIE_FILE = '/tmp/review-board-cookies.txt'
+COOKIE_FILE = os.path.join(get_os_temp_dir(), 'reviewboard-svn-hooks-cookies.txt')
+
+DEBUG = conf.getint('common', 'debug')
+
+def debug(s):
+	if not DEBUG:
+		return
+	f = open(os.path.join(get_os_log_dir(), 'reviewboard-svn-hooks', 'debug.log'), 'at')
+	print >>f, s
+	f.close()
+
+
 
 RB_SERVER = conf.get('reviewboard', 'url')
 USERNAME = conf.get('reviewboard', 'username')
 PASSWORD = conf.get('reviewboard', 'password')
 
-MIN_SHIP_IT_COUNT = conf.getint('rule', 'min_ship_it_count')
-MIN_KEY_USER_SHIP_IT_COUNT = conf.getint('rule', 'min_key_user_ship_it_count')
-key_users = conf.get('rule', 'key_ship_it_users')
-KEY_SHIP_IT_USERS = set([s.strip() for s in key_users.split(',')])
+debug('xxxxx')
 
-def debug(s):
-	f = open('/tmp/svn-hook.log', 'at')
-	print >>f, s
-	f.close()
+MIN_SHIP_IT_COUNT = conf.getint('rule', 'min_ship_it_count')
+MIN_EXPERT_SHIP_IT_COUNT = conf.getint('rule', 'min_expert_ship_it_count')
+experts = conf.get('rule', 'experts')
+EXPERTS = set([s.strip() for s in experts.split(',')])
+
 
 class SvnError(StandardError):
 	pass
@@ -78,7 +121,7 @@ def get_review_id(repos, txn):
 	raise SvnError('No review id.')
 
 def add_to_rid_db(rid):
-	USED_RID_DB = shelve.open('/etc/rb-svn-hooks-used-rid.db')
+	USED_RID_DB = shelve.open(os.path.join(get_os_conf_dir(), 'rb-svn-hooks-used-rid.db'))
 	if USED_RID_DB.has_key(rid):
 		raise SvnError, "review-id(%s) is already used."%rid
 	USED_RID_DB[rid] = rid
@@ -101,11 +144,11 @@ def check_rb(repos, txn):
 	
 	if len(ship_it_users) < MIN_SHIP_IT_COUNT:
 		raise SvnError, "not enough of ship_it."
-	key_user_count = 0
+	expert_count = 0
 	for user in ship_it_users:
-		if user in KEY_SHIP_IT_USERS:
-			key_user_count += 1
-	if key_user_count < MIN_KEY_USER_SHIP_IT_COUNT:
+		if user in EXPERTS:
+			expert_count += 1
+	if expert_count < MIN_EXPERT_SHIP_IT_COUNT:
 		raise SvnError, 'not enough of key user ship_it.'
 	add_to_rid_db(rid)
 
@@ -114,21 +157,21 @@ def _main():
 
 	repos = sys.argv[1]
 	txn = sys.argv[2]
-
-	svnlook = make_svnlook_cmd('changed', repos, txn)
-	changed = get_cmd_output(svnlook)
-	for line in changed.split('\n'):
-		f = line[4:]
-		debug(type(f))
-		# 有提交到主干分枝的代码，触发检测。
-		if 'src/server/' in f or 'release/server' in f:
-			if 'src/server/res/' in f or 'release/server/res/' in f:
-				continue
-			if 'server/dist/virtualenv_dist' in f:
-				continue
-			check_rb(repos, txn)
-			return
-	return
+#
+#	svnlook = make_svnlook_cmd('changed', repos, txn)
+#	changed = get_cmd_output(svnlook)
+#	for line in changed.split('\n'):
+#		f = line[4:]
+#		debug(type(f))
+#		if 'src/server/' in f or 'release/server' in f:
+#			if 'src/server/res/' in f or 'release/server/res/' in f:
+#				continue
+#			if 'server/dist/virtualenv_dist' in f:
+#				continue
+#			check_rb(repos, txn)
+#			return
+#	return
+	check_rb(repos, txn)
 
 def main():
 	try:
