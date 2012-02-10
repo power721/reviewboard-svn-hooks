@@ -5,6 +5,10 @@ import sys, os
 name='reviewboard-svn-hooks'
 version = '0.1.1-rc0'
 
+if sys.version <= '2.5':
+	requires = ['simplejson']
+else:
+	requires = []
 
 def get_os_log_dir():
   platform = sys.platform
@@ -61,7 +65,7 @@ setup(name=name,
       zip_safe=False,
       install_requires=[
           # -*- Extra requirements: -*-
-      ],
+      ] + requires,
       entry_points="""
       # -*- Entry points: -*-
       [console_scripts]

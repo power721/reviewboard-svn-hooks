@@ -7,11 +7,14 @@ import urllib2
 import cookielib
 import base64
 import re
-import json
 from urlparse import urljoin
 import shelve
 
 import ConfigParser
+try:
+	import json
+except ImportError:
+	import simplejson as json
 
 def get_os_conf_dir():
 	platform = sys.platform
