@@ -3,23 +3,8 @@ import distutils.dir_util
 import sys, os
 
 name='reviewboard-svn-hooks'
-version = '0.1.0'
+version = '0.1.1-rc0'
 
-conf_file_template = '''
-[common]
-debug = 0
-
-[reviewboard]
-url=
-username=
-password=
-
-[rule]
-min_ship_it_count =
-min_expert_ship_it_count =
-experts =
-
-'''
 
 def get_os_log_dir():
   platform = sys.platform
@@ -54,14 +39,11 @@ def mk_log_path():
   return path
 
 def after_install():
+  print
   if len(sys.argv) >= 2 and (sys.argv[1].lower() == 'install' or sys.argv[1].lower() == 'develop'):
     mk_log_path()
     conf_path = mk_conf_path()
-    conf_file = os.path.join(conf_path, 'conf.ini')
-    if os.path.exists(conf_file):
-      return
-    with open(conf_file, 'w') as f:
-      print >>f, conf_file_template
+    distutils.file_util.copy_file('conf_templates/conf.ini', conf_path)
     
 setup(name=name,
       version=version,
