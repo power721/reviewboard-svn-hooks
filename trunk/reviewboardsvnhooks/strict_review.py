@@ -24,14 +24,8 @@ def get_os_conf_dir():
 	return '/etc'
 
 def get_os_temp_dir():
-	platform = sys.platform
-	if platform.startswith('win'):
-		try:
-			return os.environ['TEMP']
-		except KeyError:
-			print >>sys.stderr, 'Unspported operation system:%s'%platform
-			sys.exit(1)
-	return '/tmp'
+	import tempfile
+	return tempfile.gettempdir()
 
 def get_os_log_dir():	
 	platform = sys.platform
@@ -63,8 +57,6 @@ def debug(s):
 	print >>f, s
 	f.close()
 
-
-
 RB_SERVER = conf.get('reviewboard', 'url')
 USERNAME = conf.get('reviewboard', 'username')
 PASSWORD = conf.get('reviewboard', 'password')
@@ -74,7 +66,11 @@ debug('xxxxx')
 MIN_SHIP_IT_COUNT = conf.getint('rule', 'min_ship_it_count')
 MIN_EXPERT_SHIP_IT_COUNT = conf.getint('rule', 'min_expert_ship_it_count')
 experts = conf.get('rule', 'experts')
-EXPERTS = set([s.strip() for s in experts.split(',')])
+EXPERTS = set([s.strip() for s in experts.split(',') if s.strip()])
+review_path = conf.get('rule', 'review_path')
+REVIEW_PATH = eval(review_path)
+#pass_path = conf.get('rule', 'pass_path')
+#PASS_PATH = set([s.strip() for s in pass_path.split(',') if s.strip()])
 
 
 class SvnError(StandardError):
@@ -157,21 +153,15 @@ def _main():
 
 	repos = sys.argv[1]
 	txn = sys.argv[2]
-#
-#	svnlook = make_svnlook_cmd('changed', repos, txn)
-#	changed = get_cmd_output(svnlook)
-#	for line in changed.split('\n'):
-#		f = line[4:]
-#		debug(type(f))
-#		if 'src/server/' in f or 'release/server' in f:
-#			if 'src/server/res/' in f or 'release/server/res/' in f:
-#				continue
-#			if 'server/dist/virtualenv_dist' in f:
-#				continue
-#			check_rb(repos, txn)
-#			return
-#	return
-	check_rb(repos, txn)
+
+	svnlook = make_svnlook_cmd('changed', repos, txn)
+	changed = get_cmd_output(svnlook)
+	for line in changed.split('\n'):
+		f = line[4:]
+		for review_path in REVIEW_PATH:
+			if review_path in f:
+				check_rb(repos, txn)
+				return
 
 def main():
 	try:

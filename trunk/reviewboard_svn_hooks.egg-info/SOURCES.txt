@@ -1,5 +1,7 @@
+MANIFEST.in
 setup.cfg
 setup.py
+conf_templates/conf.ini
 reviewboard_svn_hooks.egg-info/PKG-INFO
 reviewboard_svn_hooks.egg-info/SOURCES.txt
 reviewboard_svn_hooks.egg-info/dependency_links.txt
