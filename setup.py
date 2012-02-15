@@ -3,7 +3,7 @@ import distutils.dir_util
 import sys, os
 
 name='reviewboard-svn-hooks'
-version = '0.1.1-rc0'
+version = '0.1.2'
 
 if sys.version <= '2.5':
 	requires = ['simplejson']
@@ -44,11 +44,15 @@ def mk_log_path():
 
 def after_install():
   print
-  if len(sys.argv) >= 2 and (sys.argv[1].lower() == 'install' or sys.argv[1].lower() == 'develop'):
-    mk_log_path()
-    conf_path = mk_conf_path()
-    distutils.file_util.copy_file('conf_templates/conf.ini', conf_path)
+#  if len(sys.argv) >= 2 and (sys.argv[1].lower() == 'install' or sys.argv[1].lower() == 'develop'):
+#    mk_log_path()
+#    conf_path = mk_conf_path()
+#    distutils.file_util.copy_file('conf_templates/conf.ini', conf_path)
     
+  mk_log_path()
+  conf_path = mk_conf_path()
+  distutils.file_util.copy_file('conf_templates/conf.ini', conf_path)
+
 setup(name=name,
       version=version,
       description="",

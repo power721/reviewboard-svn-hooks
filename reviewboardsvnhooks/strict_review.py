@@ -106,7 +106,9 @@ class Opener(object):
 			raise SvnError(str(e))
 
 def make_svnlook_cmd(directive, repos, txn):
-	return ['svnlook', directive, '-t',  txn, repos]
+	cmd =['svnlook', directive, '-t',  txn, repos]
+	debug(cmd)
+	return cmd
 
 def get_cmd_output(cmd):
 	return subprocess.Popen(cmd, stdout = subprocess.PIPE).communicate()[0]
