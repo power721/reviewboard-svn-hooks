@@ -16,6 +16,8 @@ try:
 except ImportError:
 	import simplejson as json
 
+from .utils import get_cmd_output
+
 def get_os_conf_dir():
 	platform = sys.platform
 	if platform.startswith('win'):
@@ -110,8 +112,13 @@ def make_svnlook_cmd(directive, repos, txn):
 	debug(cmd)
 	return cmd
 
-def get_cmd_output(cmd):
-	return subprocess.Popen(cmd, stdout = subprocess.PIPE).communicate()[0]
+#def get_cmd_output(cmd):
+#	p = subprocess.Popen(cmd,
+#			stdin = subprocess.PIPE,
+#			stdout = subprocess.PIPE,
+#			stderr = subprocess.PIPE)
+#	p.stdin.close()
+#	return p.communicate()[0]
 
 def get_review_id(repos, txn):
 	svnlook = make_svnlook_cmd('log', repos, txn)
@@ -122,7 +129,9 @@ def get_review_id(repos, txn):
 	raise SvnError('No review id.')
 
 def add_to_rid_db(rid):
-	USED_RID_DB = shelve.open(os.path.join(get_os_conf_dir(), 'rb-svn-hooks-used-rid.db'))
+	USED_RID_DB = shelve.open(os.path.join(get_os_conf_dir(),
+		'reviewboard-svn-hooks',
+		'rb-svn-hooks-used-rid.db'))
 	if USED_RID_DB.has_key(rid):
 		raise SvnError, "review-id(%s) is already used."%rid
 	USED_RID_DB[rid] = rid
