@@ -32,14 +32,10 @@ def get_os_temp_dir():
 	import tempfile
 	return tempfile.gettempdir()
 
-def get_os_log_dir():	
+def get_os_log_dir():
 	platform = sys.platform
 	if platform.startswith('win'):
-		try:
-			return os.environ['APPDATA']
-		except KeyError:
-			print >>sys.stderr, 'Unspported operation system:%s'%platform
-			sys.exit(1)
+		return get_os_conf_dir()
 	return '/var/log'
 
 OS_CONF_DIR = get_os_conf_dir()
