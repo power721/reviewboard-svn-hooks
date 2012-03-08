@@ -43,12 +43,6 @@ def mk_log_path():
   return path
 
 def after_install():
-  print
-#  if len(sys.argv) >= 2 and (sys.argv[1].lower() == 'install' or sys.argv[1].lower() == 'develop'):
-#    mk_log_path()
-#    conf_path = mk_conf_path()
-#    distutils.file_util.copy_file('conf_templates/conf.ini', conf_path)
-    
   mk_log_path()
   conf_path = mk_conf_path()
   distutils.file_util.copy_file('conf_templates/conf.ini', conf_path)

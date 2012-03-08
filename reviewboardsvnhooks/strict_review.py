@@ -7,14 +7,16 @@ import urllib2
 import cookielib
 import base64
 import re
-from urlparse import urljoin
 import shelve
-
+import shlex
+import datetime
 import ConfigParser
 try:
 	import json
 except ImportError:
 	import simplejson as json
+
+from urlparse import urljoin
 
 from .utils import get_cmd_output
 
@@ -55,24 +57,19 @@ def debug(s):
 	if not DEBUG:
 		return
 	f = open(os.path.join(get_os_log_dir(), 'reviewboard-svn-hooks', 'debug.log'), 'at')
-	print >>f, s
+	print >>f, str(datetime.datetime.now()), s
 	f.close()
 
 RB_SERVER = conf.get('reviewboard', 'url')
 USERNAME = conf.get('reviewboard', 'username')
 PASSWORD = conf.get('reviewboard', 'password')
 
-debug('xxxxx')
-
 MIN_SHIP_IT_COUNT = conf.getint('rule', 'min_ship_it_count')
 MIN_EXPERT_SHIP_IT_COUNT = conf.getint('rule', 'min_expert_ship_it_count')
 experts = conf.get('rule', 'experts')
-EXPERTS = set([s.strip() for s in experts.split(',') if s.strip()])
+EXPERTS = set([i.strip() for i in shlex.split(experts, posix = False) if i.strip()])
 review_path = conf.get('rule', 'review_path')
-REVIEW_PATH = eval(review_path)
-#pass_path = conf.get('rule', 'pass_path')
-#PASS_PATH = set([s.strip() for s in pass_path.split(',') if s.strip()])
-
+REVIEW_PATH = set([i.strip() for i in shlex.split(review_path, posix = False) if i.strip()])
 
 class SvnError(StandardError):
 	pass
@@ -108,17 +105,10 @@ def make_svnlook_cmd(directive, repos, txn):
 	debug(cmd)
 	return cmd
 
-#def get_cmd_output(cmd):
-#	p = subprocess.Popen(cmd,
-#			stdin = subprocess.PIPE,
-#			stdout = subprocess.PIPE,
-#			stderr = subprocess.PIPE)
-#	p.stdin.close()
-#	return p.communicate()[0]
-
 def get_review_id(repos, txn):
 	svnlook = make_svnlook_cmd('log', repos, txn)
 	log = get_cmd_output(svnlook)
+	debug(log)
 	rid = re.search(r'review:([0-9]+)', log, re.M | re.I)
 	if rid:
 		return rid.group(1)
@@ -160,12 +150,16 @@ def check_rb(repos, txn):
 
 def _main():
 	debug('command:' + str(sys.argv))
-
 	repos = sys.argv[1]
 	txn = sys.argv[2]
 
+	if not REVIEW_PATH:
+		check_rb(repos, txn)
+		return 
+
 	svnlook = make_svnlook_cmd('changed', repos, txn)
 	changed = get_cmd_output(svnlook)
+	debug(changed)
 	for line in changed.split('\n'):
 		f = line[4:]
 		for review_path in REVIEW_PATH:
@@ -186,4 +180,4 @@ def main():
 		exit(1)
 	else:
 		exit(0)
-	
+
