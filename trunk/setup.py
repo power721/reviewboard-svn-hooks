@@ -3,12 +3,12 @@ import distutils.dir_util
 import sys, os
 
 name='reviewboard-svn-hooks'
-version = '0.1.2'
+version = '0.1.3'
 
 if sys.version <= '2.5':
-	requires = ['simplejson']
+    requires = ['simplejson']
 else:
-	requires = []
+    requires = []
 
 def get_os_log_dir():
   platform = sys.platform
