@@ -28,7 +28,7 @@ def get_cmd_output_old(cmd):
     return p.communicate()[0]
 
 def get_cmd_output(cmd):
-    return os.popen(cmd).read()
+    return os.popen(' '.join(cmd)).read()
 
 
 def split(s):
