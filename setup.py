@@ -3,7 +3,7 @@ import distutils.dir_util
 import sys, os
 
 name='reviewboard-svn-hooks'
-version = '0.1.3'
+version = '0.2.0'
 
 if sys.version <= '2.5':
     requires = ['simplejson']
