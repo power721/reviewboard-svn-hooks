@@ -69,6 +69,8 @@ experts = conf.get('rule', 'experts')
 EXPERTS = split(experts)
 review_path = conf.get('rule', 'review_path')
 REVIEW_PATH = split(review_path)
+ignore_path = conf.get('rule', 'ignore_path')
+IGNORE_PATH = split(ignore_path)
 
 class SvnError(StandardError):
     pass
@@ -100,7 +102,13 @@ class Opener(object):
             raise SvnError(str(e))
 
 def make_svnlook_cmd(directive, repos, txn):
-    cmd =['svnlook', directive, '-t',  txn, repos]
+    def get_svnlook():
+        platform = sys.platform
+        if platform.startswith('win'):
+            return get_cmd_output(['where svnlook']).split('\n')[0].strip()
+        return 'svnlook'
+
+    cmd =[get_svnlook(), directive, '-t',  txn, repos]
     debug(cmd)
     return cmd
 
@@ -147,18 +155,30 @@ def check_rb(repos, txn):
         raise SvnError, 'not enough of key user ship_it.'
     add_to_rid_db(rid)
 
+def is_ignorable(changed):
+    for line in changed.split('\n'):
+        f = line[4:]
+        for ignore_path in IGNORE_PATH:
+            if ignore_path not in f:
+                return False
+    return True
+
 def _main():
     debug('command:' + str(sys.argv))
     repos = sys.argv[1]
     txn = sys.argv[2]
 
+    svnlook = make_svnlook_cmd('changed', repos, txn)
+    changed = get_cmd_output(svnlook)
+    debug(changed)
+
+    if is_ignorable(changed):
+        return
+
     if not REVIEW_PATH:
         check_rb(repos, txn)
         return 
 
-    svnlook = make_svnlook_cmd('changed', repos, txn)
-    changed = get_cmd_output(svnlook)
-    debug(changed)
     for line in changed.split('\n'):
         f = line[4:]
         for review_path in REVIEW_PATH:
