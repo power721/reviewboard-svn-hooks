@@ -157,10 +157,16 @@ def check_rb(repos, txn):
 
 def is_ignorable(changed):
     for line in changed.split('\n'):
+        if not line.strip():
+            continue
         f = line[4:]
+        flg = False
         for ignore_path in IGNORE_PATH:
-            if ignore_path not in f:
-                return False
+            if ignore_path in f:
+                flg = True
+                break
+        if not flg:
+            return False
     return True
 
 def _main():

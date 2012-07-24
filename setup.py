@@ -1,9 +1,11 @@
+import versiontools_support
+
 from setuptools import setup, find_packages
 import distutils.dir_util
 import sys, os
 
 name='reviewboard-svn-hooks'
-version = '0.2.0'
+version = '0.2.1'
 
 if sys.version <= '2.5':
     requires = ['simplejson']
@@ -49,6 +51,7 @@ def after_install():
 
 setup(name=name,
       version=version,
+#    version = ':versiontools:reviewboardsvnhooks',
       description="",
       long_description="""\
 """,
